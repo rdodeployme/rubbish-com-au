@@ -1,6 +1,6 @@
 import { COLLECTOR_APP_URL } from "@/lib/config";
 
-// "For collectors": a real screenshot of the collector app's Jobs screen in a plain phone frame.
+// "For collectors": a real screenshot of the collector app (signed-out start screen, /app) in a plain phone frame.
 export default function CollectorBand() {
   const shot = import.meta.env.BASE_URL + "collector-app-jobs.png";
   return (
@@ -24,7 +24,7 @@ export default function CollectorBand() {
         <div className="mx-auto w-[260px] md:w-full max-w-[320px]">
           <div className="rounded-[44px] bg-[#111111] p-3 shadow-[0_30px_60px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
             <div className="relative rounded-[34px] overflow-hidden bg-white aspect-[390/844]">
-              <img src={shot} alt="The Rubbish.com.au collector app showing the Jobs screen." className="absolute inset-0 h-full w-full object-cover object-top" loading="lazy" />
+              <img src={shot} alt="The Rubbish.com.au collector app start screen, with Register as a collector and Sign in." className="absolute inset-0 h-full w-full object-cover object-top" loading="lazy" />
               <span className="absolute top-2 left-1/2 -translate-x-1/2 h-5 w-24 rounded-full bg-[#111111]" aria-hidden="true" />
             </div>
           </div>

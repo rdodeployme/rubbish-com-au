@@ -22,7 +22,7 @@ The site is built for `https://rdodeployme.github.io/rubbish-com-au/`. For a cus
 - `src/lib/config.js`: the collector app link (`APP_URL`) and the terms link (placeholder).
 - `src/lib/loadModel.js`, `src/lib/binModel.js`: copied from the Base44 app. Keep them in step.
 - `src/components/postpickup`, `src/components/mypickups`, `src/components/bins`, `src/components/messages`: ported from the Base44 app with the same wording, checks and payloads. Layout only is changed for desktop.
-- `public/collector-app-jobs.png`: a real screenshot of the collector app's Jobs screen (published app, 9 Nov 2026), used in the "For collectors" phone mock-up.
+- `public/collector-app-jobs.png`: a real screenshot of the collector app start screen at /app (published app, 9 Nov 2026), used in the "For collectors" phone mock-up.
 
 ## Not done here on purpose
 
