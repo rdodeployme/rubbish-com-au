@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    @apply bg-white text-black font-body antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-heading;
+    text-wrap: balance;
+  }
+  p { text-wrap: pretty; }
+  :focus-visible { outline: 2px solid #1B1B1B; outline-offset: 2px; }
+  .bg-black :focus-visible, .bg-asphalt :focus-visible { outline-color: #FBC303; }
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes rubbish-drop-in {
+  from { transform: translateY(-140px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes rubbish-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.rubbish-drop-in { animation: rubbish-drop-in 0.45s cubic-bezier(0.3, 1.35, 0.6, 1); }
+.rubbish-bob { animation: rubbish-bob 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .rubbish-drop-in, .rubbish-bob { animation: none !important; }
+}
