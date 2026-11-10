@@ -3,6 +3,7 @@ import { getCounts, nextItemId, formatVolume } from "@/lib/loadModel";
 import { WHEELIE_SIZES, WHEELIE_FREQUENCIES, getLoadVolume } from "@/lib/binModel";
 import WheelieDrawing from "./WheelieDrawing";
 import ItemTiles from "@/components/postpickup/ItemTiles";
+import StickyAction from "@/components/StickyAction";
 
 // Ported from the Base44 app. Same counting rule: whole litres, rounded up.
 export default function WheeliePicker({ load, setLoad, binSize, setBinSize, count, setCount, frequency, setFrequency, onGetQuotes }) {
@@ -75,11 +76,12 @@ export default function WheeliePicker({ load, setLoad, binSize, setBinSize, coun
           <h2 className="font-heading font-extrabold text-lg text-black hidden lg:block">What needs to go?</h2>
           <ItemTiles counts={counts} onAdd={addItem} onRemove={removeItem} />
           <p className="text-[14px] text-black/70 leading-snug">General waste, recycling, green waste or cardboard. Pick streams in the next step.</p>
-          <button type="button" onClick={onGetQuotes} className="w-full rounded-full bg-black text-white py-3.5 font-heading font-extrabold text-sm min-h-[52px]">
+          <button type="button" onClick={onGetQuotes} className="hidden lg:block w-full rounded-full bg-black text-white py-3.5 font-heading font-extrabold text-sm min-h-[52px]">
             Get wheelie bin quotes
           </button>
         </div>
       </div>
+      <StickyAction summary={`${count} \u00d7 ${binSize}\u00a0L`} detail={freqText + itemPart} buttonLabel="Get quotes" onClick={onGetQuotes} />
     </div>
   );
 }

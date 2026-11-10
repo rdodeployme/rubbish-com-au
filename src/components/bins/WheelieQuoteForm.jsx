@@ -26,6 +26,7 @@ export default function WheelieQuoteForm({ binSize, count, frequency, load, onSu
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const refs = useRef({});
+  const [tried, setTried] = useState(false);
 
   useEffect(() => {
     setBinLitres(binSize);
@@ -54,7 +55,12 @@ export default function WheelieQuoteForm({ binSize, count, frequency, load, onSu
     return e;
   };
 
+  useEffect(() => {
+    if (tried) setErrors(validate());
+  }, [tried, propertyType, binLitres, binCount, formFreq, streams, suburb, startDate, name, mobile, email, hazard]);
+
   const submit = async () => {
+    setTried(true);
     const e = validate();
     if (Object.keys(e).length > 0) {
       setErrors(e);
@@ -154,7 +160,7 @@ export default function WheelieQuoteForm({ binSize, count, frequency, load, onSu
           <TextField id="wb-mobile" label="Mobile" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" autoComplete="tel" error={errors.mobile} refCb={r("mobile")} />
         </div>
         <TextField id="wb-email" label="Email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" error={errors.email} refCb={r("email")} />
-        <HazardCheck checked={hazard} onChange={(v) => { setHazard(v); if (v) setErrors((p) => { const n = { ...p }; delete n.hazard; return n; }); }} error={errors.hazard} refCb={r("hazard")}>
+        <HazardCheck checked={hazard} onChange={setHazard} error={errors.hazard} refCb={r("hazard")}>
           No asbestos, chemicals, paint, gas bottles, tyres, batteries or medical waste will go in the bins.
         </HazardCheck>
       </div>

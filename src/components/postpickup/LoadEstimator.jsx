@@ -5,6 +5,7 @@ import {
 import VehicleStage from "./VehicleStage";
 import ItemTiles from "./ItemTiles";
 import WontFitPrompt from "./WontFitPrompt";
+import StickyAction from "@/components/StickyAction";
 
 const TOL = 1e-6;
 
@@ -120,7 +121,7 @@ export default function LoadEstimator({ load, setLoad, onDone }) {
               <button
                 type="button"
                 onClick={onDone}
-                className="flex-1 rounded-full bg-black text-white px-5 py-3 font-heading font-extrabold text-sm min-h-[48px]"
+                className="hidden lg:block flex-1 rounded-full bg-black text-white px-5 py-3 font-heading font-extrabold text-sm min-h-[48px]"
               >
                 {volume > 0 ? "Use this load" : "Back to the form"}
               </button>
@@ -128,6 +129,7 @@ export default function LoadEstimator({ load, setLoad, onDone }) {
           </div>
         </div>
       </div>
+      <StickyAction summary={`${formatVolume(volume)} m\u00b3`} detail={readoutText(vehicle, volume)} buttonLabel={volume > 0 ? "Use this load" : "Back to the form"} onClick={onDone} />
       <WontFitPrompt prompt={prompt} onAction={handlePromptAction} />
     </div>
   );

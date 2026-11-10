@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
+import Portal from "@/components/Portal";
 
 // Bottom sheet on phones, centred panel on wider screens.
 export function DetailSheet({ title, subtitle, onClose, children, headerLeading, wide = false }) {
@@ -15,6 +16,7 @@ export function DetailSheet({ title, subtitle, onClose, children, headerLeading,
   }, [onClose]);
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className={`relative w-full ${wide ? "md:max-w-[760px]" : "md:max-w-[560px]"} bg-white rounded-t-[28px] md:rounded-[28px] max-h-[92vh] overflow-y-auto`}>
@@ -33,6 +35,7 @@ export function DetailSheet({ title, subtitle, onClose, children, headerLeading,
         <div className="px-5 md:px-7 pb-6 md:pb-8">{children}</div>
       </div>
     </div>
+    </Portal>
   );
 }
 

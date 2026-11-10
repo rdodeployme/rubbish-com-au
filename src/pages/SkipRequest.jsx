@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { useLoad } from "@/lib/loadModel";
 import SkipPicker from "@/components/bins/SkipPicker";
@@ -11,6 +11,7 @@ export default function SkipRequest() {
   const [submitted, setSubmitted] = useState(null);
   const [binType, setBinType] = useState("skip");
   const [size, setSize] = useState(6);
+  useEffect(() => { if (submitted) window.scrollTo(0, 0); }, [submitted]);
   const go = (v) => { setView(v); window.scrollTo(0, 0); };
 
   return (

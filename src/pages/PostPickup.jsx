@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { VEHICLES } from "@/lib/loadModel";
 import { Link } from "react-router-dom";
 import Layout, { Spinner } from "@/components/layout/Layout";
 import { useLoad } from "@/lib/loadModel";
@@ -17,6 +18,13 @@ export default function PostPickup() {
   const [loadVersion, setLoadVersion] = useState(0);
   const [submitted, setSubmitted] = useState(null);
   const [posted, setPosted] = useState(false);
+
+  useEffect(() => { if (posted || submitted) window.scrollTo(0, 0); }, [posted, submitted]);
+
+  // Fetch the vehicle pictures early so the loader is not empty on a slow phone connection.
+  useEffect(() => {
+    Object.values(VEHICLES).forEach((v) => { [v.image, v.overlay].forEach((src) => { const i = new Image(); i.src = src; }); });
+  }, []);
 
   const openLoader = () => { setView("loader"); window.scrollTo(0, 0); };
   const closeLoader = () => { setLoadVersion((v) => v + 1); setView("form"); window.scrollTo(0, 0); };

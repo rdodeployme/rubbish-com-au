@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Navigate, useLocation, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { base44, errorMessage, errorStatus } from "@/api/base44";
 import Layout, { Spinner } from "@/components/layout/Layout";
 import StarRating from "@/components/StarRating";
@@ -55,7 +56,12 @@ export default function CollectorProfile() {
   return (
     <Layout>
       <section className="bg-black">
-        <div className="mx-auto max-w-site px-4 md:px-8 py-8 md:py-12 flex flex-col md:flex-row items-center md:items-center gap-4 md:gap-6 text-center md:text-left">
+        <div className="mx-auto max-w-site px-4 md:px-8 pt-4">
+          <Link to="/my-pickups" className="inline-flex items-center gap-1.5 min-h-[44px] text-white/80 hover:text-white font-heading font-extrabold text-[14px]">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />Back to my pick ups
+          </Link>
+        </div>
+        <div className="mx-auto max-w-site px-4 md:px-8 pt-2 pb-8 md:pb-12 flex flex-col md:flex-row items-center md:items-center gap-4 md:gap-6 text-center md:text-left">
           <span className="inline-flex rounded-full" style={{ boxShadow: "0 0 0 4px #FBC303" }}>
             <CollectorAvatar photoUrl={c.public_photo_url} name={c.trading_name} size={88} />
           </span>

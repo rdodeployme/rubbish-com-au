@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { base44, errorMessage } from "@/api/base44";
+import Portal from "@/components/Portal";
 
 // Small sheet for telling the team something went wrong with a job.
 export default function ReportProblem({ jobId }) {
@@ -32,6 +33,7 @@ export default function ReportProblem({ jobId }) {
         Report a problem
       </button>
       {open && (
+        <Portal>
         <div className="fixed inset-0 z-[70] flex items-end md:items-center justify-center md:p-6" role="dialog" aria-modal="true" aria-labelledby={`rp-${jobId}`}>
           <div className="absolute inset-0 bg-black/50" onClick={close} />
           <div className="relative w-full md:max-w-[480px] bg-white rounded-t-[28px] md:rounded-[28px] p-5 md:p-7">
@@ -64,6 +66,7 @@ export default function ReportProblem({ jobId }) {
             )}
           </div>
         </div>
+        </Portal>
       )}
     </>
   );

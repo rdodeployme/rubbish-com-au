@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { useLoad } from "@/lib/loadModel";
 import WheeliePicker from "@/components/bins/WheeliePicker";
@@ -12,6 +12,7 @@ export default function WheelieRequest() {
   const [binSize, setBinSize] = useState(240);
   const [count, setCount] = useState(4);
   const [frequency, setFrequency] = useState("Weekly");
+  useEffect(() => { if (submitted) window.scrollTo(0, 0); }, [submitted]);
   const go = (v) => { setView(v); window.scrollTo(0, 0); };
 
   return (

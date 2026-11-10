@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { X } from "lucide-react";
 import { base44, errorMessage, errorStatus } from "@/api/base44";
 import { parseServerDate } from "@/lib/format";
+import Portal from "@/components/Portal";
 
 function melbourneDay(value) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit" }).format(value);
@@ -116,6 +117,7 @@ export default function MessageSheet({ jobId, applicationId, onClose }) {
   const showClosedOnly = closed && messages.length === 0;
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-[60] flex items-end md:items-stretch justify-center md:justify-end" role="dialog" aria-modal="true" aria-label={`Messages with ${otherName}`}>
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full md:max-w-[480px] bg-white rounded-t-[28px] md:rounded-none h-[100dvh] flex flex-col">
@@ -192,5 +194,6 @@ export default function MessageSheet({ jobId, applicationId, onClose }) {
         )}
       </div>
     </div>
+    </Portal>
   );
 }

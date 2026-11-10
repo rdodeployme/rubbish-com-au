@@ -4,6 +4,7 @@ import { SKIP_BINS, HOOK_BINS, getLoadVolume, suggestSize, mostPopularSize, buil
 import BinDrawing from "./BinDrawing";
 import SizeSlider from "./SizeSlider";
 import ItemTiles from "@/components/postpickup/ItemTiles";
+import StickyAction from "@/components/StickyAction";
 
 // Ported from the Base44 app. On wide screens the bin sits beside the controls.
 export default function SkipPicker({ load, setLoad, binType, setBinType, size, setSize, onGetQuotes }) {
@@ -88,11 +89,12 @@ export default function SkipPicker({ load, setLoad, binType, setBinType, size, s
           <h2 className="font-heading font-extrabold text-lg text-black hidden lg:block">What needs to go?</h2>
           <ItemTiles counts={counts} onAdd={addItem} onRemove={removeItem} />
           <p className="text-[14px] text-black/70 leading-snug">{hint}</p>
-          <button type="button" onClick={onGetQuotes} className="w-full rounded-full bg-black text-white py-3.5 font-heading font-extrabold text-sm min-h-[52px]">
+          <button type="button" onClick={onGetQuotes} className="hidden lg:block w-full rounded-full bg-black text-white py-3.5 font-heading font-extrabold text-sm min-h-[52px]">
             {`Get ${kind === "skip" ? "skip" : "hook"} bin quotes`}
           </button>
         </div>
       </div>
+      <StickyAction summary={`${size}\u00a0m\u00b3 ${kind === "skip" ? "skip" : "hook bin"}`} detail={readoutSmall} buttonLabel="Get quotes" onClick={onGetQuotes} />
     </div>
   );
 }

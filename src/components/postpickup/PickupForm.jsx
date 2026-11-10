@@ -93,6 +93,7 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
   const [submitError, setSubmitError] = useState("");
 
   const refs = useRef({});
+  const [tried, setTried] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -217,7 +218,13 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
     }
   };
 
+  // After a first submit, errors update as each field is fixed (no stale messages).
+  useEffect(() => {
+    if (tried) setErrors(validate());
+  }, [tried, size, description, suburb, pickupDate, timeWindow, name, mobile, email, streetAddress, postcode, hazard]);
+
   const submit = async () => {
+    setTried(true);
     const e = validate();
     if (Object.keys(e).length > 0) {
       setErrors(e);
@@ -535,7 +542,6 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
                 checked={hazard}
                 onChange={(e) => {
                   setHazard(e.target.checked);
-                  if (e.target.checked) setErrors((prev) => { const n = { ...prev }; delete n.hazard; return n; });
                 }}
                 className="mt-0.5 h-5 w-5 shrink-0 accent-black"
               />

@@ -1,4 +1,5 @@
 import { VEHICLES, ITEM_BY_KEY, formatVolume } from "@/lib/loadModel";
+import Portal from "@/components/Portal";
 
 // prompt = { trigger: 'item' | 'switch', currentVehicle, targetVehicle, tappedItem, N }
 function buildContent(prompt) {
@@ -38,6 +39,7 @@ export default function WontFitPrompt({ prompt, onAction }) {
   if (!prompt) return null;
   const { heading, text, buttons } = buildContent(prompt);
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="wontfit-title">
       <div className="w-full max-w-[380px] rounded-[28px] bg-white p-6 relative shadow-xl">
         <button type="button" onClick={() => onAction("keep")} aria-label="Close" className="absolute top-3 right-3 grid place-items-center h-11 w-11 text-black">
@@ -66,5 +68,6 @@ export default function WontFitPrompt({ prompt, onAction }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
