@@ -5,7 +5,7 @@ import { useAuth, userEmail } from "@/lib/auth";
 import Layout, { Spinner, PageHero } from "@/components/layout/Layout";
 import { DetailSheet } from "@/components/Sheet";
 import PickupDetail from "@/components/mypickups/PickupDetail";
-import { jobStatusPillClass } from "@/lib/jobStatus";
+import { jobStatusPillClass, customerStatusLabel, customerStatusPillClass, isInReview } from "@/lib/jobStatus";
 import { formatAUDate } from "@/lib/format";
 import { saveRepost } from "@/lib/repost";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -108,15 +108,17 @@ export default function MyPickups() {
                           {p.pickup_date ? formatAUDate(p.pickup_date) : "No date"}
                           {p.time_window ? ` · ${p.time_window}` : ""}
                         </p>
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-heading font-extrabold shrink-0 ${jobStatusPillClass(p.job_status)}`}>
-                          {p.job_status}
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-heading font-extrabold shrink-0 ${customerStatusPillClass(p)}`}>
+                          {customerStatusLabel(p)}
                         </span>
                       </div>
                       {p.suburb && <p className="mt-1 text-mute text-[13px]">{p.suburb}</p>}
                       <p className="mt-0.5 text-mute text-[13px]">
                         {p.size || (p.estimated_volume_m3 != null ? `${p.estimated_volume_m3} m³` : "")}
                       </p>
-                      {p.job_status === "Open" && <p className="mt-0.5 text-mute text-[13px]">{p.quote_count || 0} of 3 quotes</p>}
+                      {isInReview(p) ? (
+                        <p className="mt-0.5 text-mute text-[13px]">We're checking your post</p>
+                      ) : p.job_status === "Open" && <p className="mt-0.5 text-mute text-[13px]">{p.quote_count || 0} of 3 quotes</p>}
                     </button>
                     {p.job_status === "Expired" && (
                       <button type="button" onClick={() => postAgain(p)} disabled={reposting} className="mt-3 w-full rounded-full bg-black text-white py-3 font-heading font-extrabold text-sm min-h-[48px] disabled:opacity-60">

@@ -1,7 +1,7 @@
 import { SheetField, SheetSection } from "@/components/Sheet";
 import PhotoThumb from "./PhotoThumb";
 import QuotesSection from "./QuotesSection";
-import { jobStatusPillClass } from "@/lib/jobStatus";
+import { customerStatusLabel, customerStatusPillClass } from "@/lib/jobStatus";
 import { formatAUDate, joinList } from "@/lib/format";
 
 // The body of a pick up. Shown in a side panel on desktop and in a sheet on phones.
@@ -12,8 +12,8 @@ export default function PickupDetail({ record, onJobUpdate }) {
       <div className="mt-2">
         <p className="text-mute text-[12px] font-bold">Job status</p>
         <div className="mt-1">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-heading font-extrabold ${jobStatusPillClass(record.job_status)}`}>
-            {record.job_status}
+          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-heading font-extrabold ${customerStatusPillClass(record)}`}>
+            {customerStatusLabel(record)}
           </span>
         </div>
       </div>

@@ -42,6 +42,8 @@ export default function QuotesSection({ record, onJobUpdate }) {
   }, [banner]);
 
   const currentStatus = jobData?.job_status || record.job_status;
+  const reviewStatus = jobData?.status ?? record.status;
+  const inReview = currentStatus === "Open" && reviewStatus !== "Approved";
   const quoteCount = jobData?.quote_count ?? record.quote_count ?? 0;
 
   const handleJobChange = (updatedJob) => {
@@ -69,7 +71,14 @@ export default function QuotesSection({ record, onJobUpdate }) {
         </div>
       )}
 
-      {currentStatus === "Open" && (
+      {inReview && (
+        <div className="rounded-2xl bg-soft p-4">
+          <h3 className="font-heading font-extrabold text-[16px] text-black">We're checking your post</h3>
+          <p className="mt-1 text-black text-[14px]">Our team checks every pick up before it goes to collectors. We'll email you when it's live, and again when quotes come in.</p>
+        </div>
+      )}
+
+      {currentStatus === "Open" && !inReview && (
         <div>
           <div className="flex items-baseline gap-2">
             <h3 className="font-heading font-extrabold text-[16px] text-black">Quotes</h3>
@@ -145,7 +154,7 @@ export default function QuotesSection({ record, onJobUpdate }) {
 
       {currentStatus === "Cancelled" && (
         <div>
-          <p className="text-mute text-[14px]">This pick up was cancelled.</p>
+          <p className="text-mute text-[14px]">{reviewStatus === "Rejected" ? "We couldn't send this pick up to collectors." : "This pick up was cancelled."}</p>
           {jobData?.cancel_reason && <p className="mt-2 text-black text-[14px]">{jobData.cancel_reason}</p>}
         </div>
       )}
