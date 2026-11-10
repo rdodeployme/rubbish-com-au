@@ -31,6 +31,11 @@ export function formatAUDateTime(iso) {
   return `${part("day")}/${part("month")}/${part("year")} ${hours}:${part("minute")}${ampm}`;
 }
 
+// Today's date in Melbourne as YYYY-MM-DD (the backend checks dates in Melbourne time).
+export function melbourneToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
 export function joinList(arr) {
   if (!Array.isArray(arr) || arr.length === 0) return "";
   return arr.join(", ");

@@ -8,6 +8,7 @@ import CompleteConfirm from "./CompleteConfirm";
 import StarRating from "@/components/StarRating";
 import MessageSheet from "@/components/messages/MessageSheet";
 import ReportProblem from "@/components/ReportProblem";
+import { formatAUDate, melbourneToday } from "@/lib/format";
 
 export default function QuotesSection({ record, onJobUpdate }) {
   const [loading, setLoading] = useState(true);
@@ -111,7 +112,17 @@ export default function QuotesSection({ record, onJobUpdate }) {
               onPriceChange={(accept) => { setBanner(accept ? "Price updated." : "Request declined."); load(); }}
             />
           ))}
-          <CompleteConfirm jobId={record.id} onSuccess={handleJobChange} />
+          {(() => {
+            // Confirm done only from the agreed date (or the pick up date if none was agreed).
+            const due = jobData?.agreed_date || record.agreed_date || record.pickup_date || "";
+            return !due || melbourneToday() >= due.slice(0, 10) ? (
+              <CompleteConfirm jobId={record.id} onSuccess={handleJobChange} />
+            ) : (
+              <p className="rounded-2xl bg-soft px-4 py-3 text-[14px] text-black">
+                You can confirm the job is done from {formatAUDate(due)}.
+              </p>
+            );
+          })()}
           <CancelConfirm jobId={record.id} onSuccess={(updatedJob) => { setBanner("Pick up cancelled."); handleJobChange(updatedJob); }} />
         </div>
       )}
