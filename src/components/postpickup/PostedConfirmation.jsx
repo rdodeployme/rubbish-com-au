@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export default function PostedConfirmation() {
+export default function PostedConfirmation({ onPostAnother }) {
   return (
     <div className="mx-auto max-w-[720px] px-4 py-10">
       <div className="rounded-[28px] bg-gold p-7 md:p-10">
@@ -12,9 +12,9 @@ export default function PostedConfirmation() {
           <Link to="/my-pickups" className="flex items-center justify-center md:px-10 rounded-full bg-black text-white py-3.5 font-heading font-extrabold text-sm min-h-[48px]">
             See my pick ups
           </Link>
-          <Link to="/" className="flex items-center justify-center md:px-10 rounded-full border border-black text-black py-3.5 font-heading font-extrabold text-sm min-h-[48px]">
-            Back home
-          </Link>
+          <button type="button" onClick={onPostAnother} className="flex items-center justify-center md:px-10 rounded-full border border-black text-black py-3.5 font-heading font-extrabold text-sm min-h-[48px]">
+            Post another pick up
+          </button>
         </div>
       </div>
     </div>

@@ -23,23 +23,23 @@ export default function Bins() {
 
   return (
     <Layout>
-      <PageHero title="Bin sizes">Not sure what you need? Here's what each one holds. Then request quotes from local suppliers.</PageHero>
+      <PageHero title="Bin sizes">Not sure what you need? Here's what each one holds. Bin bookings are coming soon, and you can join the waitlist now.</PageHero>
 
       <div className="mx-auto max-w-site px-4 md:px-8 py-8 md:py-12">
         <div className="grid gap-3 md:grid-cols-2">
           <Link to="/skip-request" className="flex items-center gap-3 rounded-2xl bg-gold px-4 py-4 min-h-[72px] hover:brightness-95">
             <span className="grid place-items-center h-11 w-11 rounded-full bg-black shrink-0"><Container className="h-5 w-5 text-gold" aria-hidden="true" /></span>
             <span className="flex-1 min-w-0">
-              <span className="block font-heading font-extrabold text-black text-[17px]">Request a skip or hook bin quote</span>
-              <span className="block text-black text-[14px]">DIY, you load it</span>
+              <span className="block font-heading font-extrabold text-black text-[17px]">Join the skip or hook bin waitlist</span>
+              <span className="block text-black text-[14px]">Coming soon. DIY, you load it</span>
             </span>
             <ArrowRight className="h-5 w-5 text-black shrink-0" aria-hidden="true" />
           </Link>
           <Link to="/wheelie-request" className="flex items-center gap-3 rounded-2xl bg-black px-4 py-4 min-h-[72px] hover:bg-asphalt">
             <span className="grid place-items-center h-11 w-11 rounded-full bg-gold shrink-0"><Trash2 className="h-5 w-5 text-black" aria-hidden="true" /></span>
             <span className="flex-1 min-w-0">
-              <span className="block font-heading font-extrabold text-white text-[17px]">Request a wheelie bin quote</span>
-              <span className="block text-white/80 text-[14px]">You fill, we empty</span>
+              <span className="block font-heading font-extrabold text-white text-[17px]">Join the wheelie bin waitlist</span>
+              <span className="block text-white/80 text-[14px]">Coming soon. You fill, we empty</span>
             </span>
             <ArrowRight className="h-5 w-5 text-gold shrink-0" aria-hidden="true" />
           </Link>
@@ -103,7 +103,7 @@ export default function Bins() {
             ))}
           </div>
           <Link to="/wheelie-request" className="mt-5 inline-flex items-center rounded-full bg-black text-white px-6 min-h-[48px] font-heading font-extrabold text-sm">
-            Set up your bins
+            Join the wheelie bin waitlist
           </Link>
         </div>
 

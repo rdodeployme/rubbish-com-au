@@ -1,5 +1,13 @@
 import { VEHICLES, ITEM_BY_KEY, formatVolume } from "@/lib/loadModel";
+import { useRef } from "react";
 import Portal from "@/components/Portal";
+import { useDialog } from "@/hooks/useDialog";
+
+function Panel({ onClose, children }) {
+  const ref = useRef(null);
+  useDialog(ref, onClose);
+  return <div ref={ref} tabIndex={-1} className="w-full max-w-[380px] rounded-[28px] bg-white p-6 relative shadow-xl focus:outline-none">{children}</div>;
+}
 
 // prompt = { trigger: 'item' | 'switch', currentVehicle, targetVehicle, tappedItem, N }
 function buildContent(prompt) {
@@ -41,7 +49,7 @@ export default function WontFitPrompt({ prompt, onAction }) {
   return (
     <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="wontfit-title">
-      <div className="w-full max-w-[380px] rounded-[28px] bg-white p-6 relative shadow-xl">
+      <Panel onClose={() => onAction("keep")}>
         <button type="button" onClick={() => onAction("keep")} aria-label="Close" className="absolute top-3 right-3 grid place-items-center h-11 w-11 text-black">
           <span className="text-2xl leading-none">&times;</span>
         </button>
@@ -66,7 +74,7 @@ export default function WontFitPrompt({ prompt, onAction }) {
             </button>
           ))}
         </div>
-      </div>
+      </Panel>
     </div>
     </Portal>
   );

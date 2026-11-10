@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Menu, X, Plus, User } from "lucide-react";
 import { LOGO_WHITE } from "@/components/brand";
@@ -22,7 +22,15 @@ export default function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
 
+  const toggleRef = useRef(null);
   useEffect(() => { setOpen(false); }, [pathname]);
+  // Escape closes the phone menu and puts focus back on the menu button.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") { setOpen(false); toggleRef.current?.focus(); } };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
     <header className="sticky top-0 z-40 bg-black">
@@ -58,6 +66,7 @@ export default function SiteHeader() {
             Post a pick up
           </Link>
           <button
+            ref={toggleRef}
             type="button"
             onClick={() => setOpen((o) => !o)}
             aria-label={open ? "Close menu" : "Open menu"}

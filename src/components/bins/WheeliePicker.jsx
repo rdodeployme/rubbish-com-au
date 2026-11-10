@@ -28,7 +28,7 @@ export default function WheeliePicker({ load, setLoad, binSize, setBinSize, coun
   const overLimit = volume > 0 && needed > 40;
   const itemPart = volume > 0
     ? overLimit
-      ? ` · about ${formatVolume(volume)} m³ needs more than 40 bins. A skip or pick-up may suit better.`
+      ? ` · about ${formatVolume(volume)} m³ needs more than 40 bins. Enter the exact number in the next step, or a pick up may suit better.`
       : ` · fits about ${formatVolume(volume)} m³`
     : "";
 
@@ -38,9 +38,10 @@ export default function WheeliePicker({ load, setLoad, binSize, setBinSize, coun
     <div className="mx-auto max-w-site px-4 md:px-8 py-6 md:py-10">
       <div className="rounded-[28px] bg-gold p-5 md:p-8 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-8">
         <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+<p className="inline-flex rounded-full bg-black text-gold px-3 py-1.5 font-heading font-extrabold text-[12px] uppercase tracking-wide">Coming soon: waitlist</p>
           <h1 className="font-heading font-extrabold text-[28px] md:text-[40px] text-black leading-tight">Set up your bins</h1>
           <p className="text-[15px] text-black leading-snug">
-            Bins supplied and emptied by a local collector. Once, or on a schedule. Add what needs to go and we'll suggest how many.
+            Bins supplied and emptied by a local collector, once or on a schedule. Add what needs to go and we'll suggest how many. Wheelie bins can't be booked yet: join the waitlist and we'll contact you when bookings open near you.
           </p>
           <div>
             <p className="font-heading font-extrabold text-[44px] text-black leading-none" aria-live="polite">{`${count} × ${binSize} L`}</p>
@@ -77,11 +78,11 @@ export default function WheeliePicker({ load, setLoad, binSize, setBinSize, coun
           <ItemTiles counts={counts} onAdd={addItem} onRemove={removeItem} />
           <p className="text-[14px] text-black/70 leading-snug">General waste, recycling, green waste or cardboard. Pick streams in the next step.</p>
           <button type="button" onClick={onGetQuotes} className="hidden lg:block w-full rounded-full bg-black text-white py-3.5 font-heading font-extrabold text-sm min-h-[52px]">
-            Get wheelie bin quotes
+            Join the wheelie bin waitlist
           </button>
         </div>
       </div>
-      <StickyAction summary={`${count} \u00d7 ${binSize}\u00a0L`} detail={freqText + itemPart} buttonLabel="Get quotes" onClick={onGetQuotes} />
+      <StickyAction summary={`${count} \u00d7 ${binSize}\u00a0L`} detail={freqText + itemPart} buttonLabel="Join the waitlist" onClick={onGetQuotes} />
     </div>
   );
 }

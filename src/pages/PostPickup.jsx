@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { VEHICLES } from "@/lib/loadModel";
 import { Link } from "react-router-dom";
 import Layout, { Spinner } from "@/components/layout/Layout";
@@ -9,13 +9,19 @@ import LoadEstimator from "@/components/postpickup/LoadEstimator";
 import PickupForm from "@/components/postpickup/PickupForm";
 import Confirmation from "@/components/postpickup/Confirmation";
 import PostedConfirmation from "@/components/postpickup/PostedConfirmation";
+import AreaCheck from "@/components/postpickup/AreaCheck";
+import { useUrlParam } from "@/hooks/useUrlParam";
 
 export default function PostPickup() {
   const { load, setLoad, hydrated } = useLoad();
   const { live, loading: loadingLive } = usePostingLive();
   const { user, loading: loadingUser } = useAuth();
-  const [view, setView] = useState("form");
+  // The loader has its own address (?step=load), so browser Back returns to the form.
+  const step = useUrlParam("step");
+  const view = step.value === "load" ? "loader" : "form";
   const [loadVersion, setLoadVersion] = useState(0);
+  const formScroll = useRef(0);
+  const prevView = useRef(view);
   const [submitted, setSubmitted] = useState(null);
   const [posted, setPosted] = useState(false);
 
@@ -26,8 +32,20 @@ export default function PostPickup() {
     Object.values(VEHICLES).forEach((v) => { [v.image, v.overlay].forEach((src) => { const i = new Image(); i.src = src; }); });
   }, []);
 
-  const openLoader = () => { setView("loader"); window.scrollTo(0, 0); };
-  const closeLoader = () => { setLoadVersion((v) => v + 1); setView("form"); window.scrollTo(0, 0); };
+  useEffect(() => {
+    if (prevView.current === view) return;
+    if (view === "loader") {
+      window.scrollTo(0, 0);
+    } else {
+      // Back on the form: refresh the size and description from the load, and return to where they were.
+      setLoadVersion((v) => v + 1);
+      requestAnimationFrame(() => window.scrollTo(0, formScroll.current));
+    }
+    prevView.current = view;
+  }, [view]);
+
+  const openLoader = () => { formScroll.current = window.scrollY; step.push("load"); };
+  const closeLoader = () => step.clear();
 
   if (loadingLive || !hydrated || loadingUser) {
     return <Layout><Spinner /></Layout>;
@@ -40,6 +58,7 @@ export default function PostPickup() {
           <div className="rounded-[28px] bg-white border border-line p-6 md:p-8">
             <h1 className="font-heading font-extrabold text-[28px] md:text-[32px] text-black leading-tight">Sign in to post your pick up</h1>
             <p className="mt-2 text-mute text-[15px]">It takes a minute, and you will see your quotes in one place.</p>
+            <AreaCheck />
             <div className="mt-6 space-y-3">
               <Link to={`/login?returnTo=${encodeURIComponent("/post-pickup")}`} className="flex items-center justify-center w-full rounded-full bg-black text-white py-3.5 font-heading font-extrabold text-sm min-h-[48px]">
                 Sign in
@@ -58,7 +77,7 @@ export default function PostPickup() {
   return (
     <Layout>
       {done ? (
-        live ? <PostedConfirmation /> : <Confirmation name={submitted.name} suburb={submitted.suburb} />
+        live ? <PostedConfirmation onPostAnother={() => { setLoad({ placedItems: [], vehicle: "ute" }); setPosted(false); }} /> : <Confirmation name={submitted.name} suburb={submitted.suburb} />
       ) : (
         <>
           {view === "loader" && <LoadEstimator load={load} setLoad={setLoad} onDone={closeLoader} />}

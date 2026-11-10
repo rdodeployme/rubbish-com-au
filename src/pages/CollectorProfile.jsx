@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { base44, errorMessage, errorStatus } from "@/api/base44";
 import Layout, { Spinner } from "@/components/layout/Layout";
@@ -18,7 +18,8 @@ function DetailRow({ label, value }) {
 
 export default function CollectorProfile() {
   const [params] = useSearchParams();
-  const { pathname, search } = useLocation();
+  const { pathname, search, state: navState } = useLocation();
+  const navigate = useNavigate();
   const id = params.get("id");
   const [collector, setCollector] = useState(null);
   const [state, setState] = useState("loading");
@@ -57,7 +58,11 @@ export default function CollectorProfile() {
     <Layout>
       <section className="bg-black">
         <div className="mx-auto max-w-site px-4 md:px-8 pt-4">
-          <Link to="/my-pickups" className="inline-flex items-center gap-1.5 min-h-[44px] text-white/80 hover:text-white font-heading font-extrabold text-[14px]">
+          <Link
+            to="/my-pickups"
+            onClick={(e) => { if (navState?.fromPickups) { e.preventDefault(); navigate(-1); } }}
+            className="inline-flex items-center gap-1.5 min-h-[44px] text-white/80 hover:text-white font-heading font-extrabold text-[14px]"
+          >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />Back to my pick ups
           </Link>
         </div>

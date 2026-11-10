@@ -1,25 +1,57 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import Portal from "@/components/Portal";
+import { useDialog } from "@/hooks/useDialog";
+
+function readScroll(key) {
+  try { return Number(sessionStorage.getItem("rubbish_sheet_" + key)) || 0; } catch { return 0; }
+}
+function saveScroll(key, y) {
+  try { sessionStorage.setItem("rubbish_sheet_" + key, String(Math.round(y))); } catch { /* ignore */ }
+}
 
 // Bottom sheet on phones, centred panel on wider screens.
-export function DetailSheet({ title, subtitle, onClose, children, headerLeading, wide = false }) {
+// scrollKey: remembers how far down the sheet was, so coming Back to it lands in the same place.
+export function DetailSheet({ title, subtitle, onClose, children, headerLeading, wide = false, scrollKey }) {
+  const panelRef = useRef(null);
+  useDialog(panelRef, onClose);
+
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  // Content (quotes) loads after the sheet opens, so keep trying for a moment.
+  useEffect(() => {
+    if (!scrollKey) return undefined;
+    const target = readScroll(scrollKey);
+    const el = panelRef.current;
+    if (!target || !el) return undefined;
+    let tries = 0;
+    let stopped = false;
+    const stop = () => { stopped = true; };
+    el.addEventListener("touchstart", stop, { passive: true, once: true });
+    el.addEventListener("wheel", stop, { passive: true, once: true });
+    const tick = () => {
+      if (stopped || !panelRef.current) return;
+      if (el.scrollHeight - el.clientHeight >= target) { el.scrollTop = target; return; }
+      if (++tries < 40) setTimeout(tick, 75);
     };
-  }, [onClose]);
+    tick();
+    return () => { stopped = true; };
+  }, [scrollKey]);
 
   return (
     <Portal>
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={`relative w-full ${wide ? "md:max-w-[760px]" : "md:max-w-[560px]"} bg-white rounded-t-[28px] md:rounded-[28px] max-h-[92vh] overflow-y-auto`}>
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        onScroll={scrollKey ? (e) => saveScroll(scrollKey, e.currentTarget.scrollTop) : undefined}
+        className={`relative w-full ${wide ? "md:max-w-[760px]" : "md:max-w-[560px]"} bg-white rounded-t-[28px] md:rounded-[28px] max-h-[92vh] overflow-y-auto focus:outline-none`}
+      >
         <div className="sticky top-0 bg-white z-10 px-5 md:px-7 pt-4 md:pt-6 pb-3 rounded-t-[28px]">
           <button type="button" onClick={onClose} aria-label="Close" className="absolute top-3 right-3 md:top-4 md:right-4 grid place-items-center h-11 w-11 rounded-full bg-soft hover:bg-line">
             <X className="h-5 w-5 text-black" />
@@ -44,7 +76,7 @@ export function SheetField({ label, value }) {
   return (
     <div>
       <p className="text-mute text-[12px] font-bold">{label}</p>
-      <p className="text-black text-[14px] whitespace-pre-line">{display}</p>
+      <p className="text-black text-[14px] whitespace-pre-line break-words">{display}</p>
     </div>
   );
 }

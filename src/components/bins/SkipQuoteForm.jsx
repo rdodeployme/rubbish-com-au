@@ -4,7 +4,13 @@ import { base44 } from "@/api/base44";
 import { ITEMS, getCounts } from "@/lib/loadModel";
 import { SKIP_BINS, HOOK_BINS, SKIP_WASTE_TYPES, SKIP_HIRE_PERIODS, SKIP_PLACEMENTS, getLoadVolume } from "@/lib/binModel";
 import { SelectField, TextField, HazardCheck } from "@/components/Fields";
+import ErrorSummary from "@/components/ErrorSummary";
+import { postcodeError } from "@/lib/area";
+import { readDraft, clearDraft, useSaveDraft } from "@/lib/draft";
 import BinFormShell, { RequestSummary } from "./BinFormShell";
+
+const DRAFT_KEY = "skip-form";
+const ORDER = ["sizeM3", "wasteType", "hirePeriod", "placement", "suburb", "postcode", "neededDate", "name", "mobile", "email", "hazard"];
 
 // Ported from the Base44 app. Saves a BinRequest row; status is left to the table default.
 export default function SkipQuoteForm({ binType, size, load, onSubmitted, onBack }) {
@@ -13,16 +19,22 @@ export default function SkipQuoteForm({ binType, size, load, onSubmitted, onBack
   const todayStr = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
   const tomorrowStr = useMemo(() => { const t = new Date(); t.setDate(t.getDate() + 1); return format(t, "yyyy-MM-dd"); }, []);
 
+  const [d] = useState(() => readDraft(DRAFT_KEY) || {});
   const [sizeM3, setSizeM3] = useState(size);
-  const [wasteType, setWasteType] = useState("General household");
-  const [hirePeriod, setHirePeriod] = useState("7 days");
-  const [placement, setPlacement] = useState("Driveway");
-  const [suburb, setSuburb] = useState("");
-  const [neededDate, setNeededDate] = useState(tomorrowStr);
-  const [name, setName] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [email, setEmail] = useState("");
-  const [hazard, setHazard] = useState(false);
+  const [wasteType, setWasteType] = useState(SKIP_WASTE_TYPES.includes(d.wasteType) ? d.wasteType : "General household");
+  const [hirePeriod, setHirePeriod] = useState(SKIP_HIRE_PERIODS.includes(d.hirePeriod) ? d.hirePeriod : "7 days");
+  const [placement, setPlacement] = useState(SKIP_PLACEMENTS.includes(d.placement) ? d.placement : "Driveway");
+  const [suburb, setSuburb] = useState(d.suburb || "");
+  const [postcode, setPostcode] = useState(d.postcode || "");
+  const [neededDate, setNeededDate] = useState(d.neededDate && d.neededDate >= todayStr ? d.neededDate : tomorrowStr);
+  const [name, setName] = useState(d.name || "");
+  const [mobile, setMobile] = useState(d.mobile || "");
+  const [email, setEmail] = useState(d.email || "");
+  const [hazard, setHazard] = useState(!!d.hazard);
+  const summaryRef = useRef(null);
+  const [focusSummary, setFocusSummary] = useState(0);
+  useEffect(() => { if (focusSummary) summaryRef.current?.focus(); }, [focusSummary]);
+  useSaveDraft(DRAFT_KEY, { wasteType, hirePeriod, placement, suburb, postcode, neededDate, name, mobile, email, hazard });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -38,6 +50,8 @@ export default function SkipQuoteForm({ binType, size, load, onSubmitted, onBack
     if (!hirePeriod) e.hirePeriod = "Pick a hire period";
     if (!placement) e.placement = "Pick where it will go";
     if (!suburb.trim()) e.suburb = "Enter your suburb";
+    const pcErr = postcodeError(postcode);
+    if (pcErr) e.postcode = pcErr;
     if (!neededDate) e.neededDate = "Pick a date";
     else if (neededDate < todayStr) e.neededDate = "Pick today or a later date";
     if (!name.trim()) e.name = "Enter your name";
@@ -51,16 +65,14 @@ export default function SkipQuoteForm({ binType, size, load, onSubmitted, onBack
 
   useEffect(() => {
     if (tried) setErrors(validate());
-  }, [tried, sizeM3, wasteType, hirePeriod, placement, suburb, neededDate, name, mobile, email, hazard]);
+  }, [tried, sizeM3, wasteType, hirePeriod, placement, suburb, postcode, neededDate, name, mobile, email, hazard]);
 
   const submit = async () => {
     setTried(true);
     const e = validate();
     if (Object.keys(e).length > 0) {
       setErrors(e);
-      const order = ["sizeM3", "wasteType", "hirePeriod", "placement", "suburb", "neededDate", "name", "mobile", "email", "hazard"];
-      const k = order.find((x) => e[x] && refs.current[x]);
-      if (k) refs.current[k].scrollIntoView({ behavior: "smooth", block: "center" });
+      setFocusSummary((n) => n + 1);
       return;
     }
     setErrors({});
@@ -76,7 +88,7 @@ export default function SkipQuoteForm({ binType, size, load, onSubmitted, onBack
         waste_type: wasteType,
         hire_period: hirePeriod,
         placement,
-        suburb: suburb.trim(),
+        suburb: `${suburb.trim()} ${postcode.trim()}`,
         needed_date: neededDate,
         name: name.trim(),
         mobile: mobile.trim(),
@@ -85,6 +97,7 @@ export default function SkipQuoteForm({ binType, size, load, onSubmitted, onBack
       };
       if (volume > 0) { payload.estimated_volume_m3 = volume; payload.load_items = loadItems; }
       await base44.entities.BinRequest.create(payload);
+      clearDraft(DRAFT_KEY);
       onSubmitted({ suburb: suburb.trim() });
     } catch {
       setSubmitError("Sorry, that didn't send. Please try again.");
@@ -102,15 +115,15 @@ export default function SkipQuoteForm({ binType, size, load, onSubmitted, onBack
         ["Waste", wasteType],
         ["Hire", hirePeriod],
         ["Placement", placement],
-        ["Suburb", suburb],
+        ["Suburb", [suburb.trim(), postcode.trim()].filter(Boolean).join(" ")],
       ]}
     />
   );
 
   return (
     <BinFormShell
-      title={kind === "skip" ? "Skip bin quotes" : "Hook bin quotes"}
-      intro="Free to request. We're signing up local suppliers first. Leave your details and we'll send your request out for quotes as soon as bookings open near you."
+      title={kind === "skip" ? "Skip bin waitlist" : "Hook bin waitlist"}
+      intro={`${kind === "skip" ? "Skip" : "Hook"} bins can't be booked yet. We're signing up suppliers in Melbourne and Brisbane first. Join the waitlist and we'll contact you when bookings open in your area. It's free and you're not committing to anything.`}
       aside={summary}
     >
       <div className="rounded-[28px] bg-concrete p-[22px] md:p-7 space-y-4">
@@ -127,9 +140,10 @@ export default function SkipQuoteForm({ binType, size, load, onSubmitted, onBack
         <h2 className="font-heading font-extrabold text-lg md:text-xl text-black">When and where?</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <TextField id="sk-suburb" label="Suburb" value={suburb} onChange={(e) => setSuburb(e.target.value)} placeholder="e.g. Brunswick VIC" autoComplete="address-level2" error={errors.suburb} refCb={r("suburb")} />
+          <TextField id="sk-postcode" label="Postcode" value={postcode} onChange={(e) => setPostcode(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="3000" inputMode="numeric" autoComplete="postal-code" hint="Melbourne and Brisbane only for now" error={errors.postcode} refCb={r("postcode")} />
           <TextField id="sk-date" label="Date needed" type="date" min={todayStr} value={neededDate} onChange={(e) => setNeededDate(e.target.value)} error={errors.neededDate} refCb={r("neededDate")} />
         </div>
-        <p className="text-[13px] text-mute leading-snug">Your suburb is shown so suppliers can locate you. No address is shared until you accept a quote.</p>
+        <p className="text-[13px] text-mute leading-snug">We don't ask for your street address yet. Suppliers will only see your suburb and postcode.</p>
       </div>
 
       <div className="rounded-[28px] bg-concrete p-[22px] md:p-7 space-y-4">
@@ -139,10 +153,12 @@ export default function SkipQuoteForm({ binType, size, load, onSubmitted, onBack
           <TextField id="sk-mobile" label="Mobile" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" autoComplete="tel" error={errors.mobile} refCb={r("mobile")} />
         </div>
         <TextField id="sk-email" label="Email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" error={errors.email} refCb={r("email")} />
-        <HazardCheck checked={hazard} onChange={setHazard} error={errors.hazard} refCb={r("hazard")}>
+        <HazardCheck id="sk-hazard" checked={hazard} onChange={setHazard} error={errors.hazard} refCb={r("hazard")}>
           No asbestos, chemicals, paint, gas bottles, tyres, batteries or medical waste will go in the bin.
         </HazardCheck>
       </div>
+
+      {tried && <ErrorSummary ref={summaryRef} id="sk-errors" errors={errors} order={ORDER} refs={refs} />}
 
       <button type="button" onClick={submit} disabled={submitting} className="w-full md:w-auto md:px-12 rounded-full bg-black text-white py-3.5 font-heading font-extrabold text-sm min-h-[52px] disabled:opacity-60">
         {submitting ? "Sending…" : "Join the waitlist"}

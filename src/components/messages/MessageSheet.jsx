@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { base44, errorMessage, errorStatus } from "@/api/base44";
 import { parseServerDate } from "@/lib/format";
 import Portal from "@/components/Portal";
+import { useDialog } from "@/hooks/useDialog";
 
 function melbourneDay(value) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit" }).format(value);
@@ -33,6 +34,8 @@ export default function MessageSheet({ jobId, applicationId, onClose }) {
   const textareaRef = useRef(null);
   const messagesLenRef = useRef(0);
   const prevCountRef = useRef(0);
+  const panelRef = useRef(null);
+  useDialog(panelRef, onClose);
 
   const loadThread = useCallback(async () => {
     try {
@@ -77,15 +80,10 @@ export default function MessageSheet({ jobId, applicationId, onClose }) {
     return () => clearInterval(interval);
   }, [closed, loading, error, loadThread]);
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
     const prevOverflow = document.body.style.overflow;
-    document.addEventListener("keydown", onKey, true);
     document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey, true);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [onClose]);
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, []);
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -120,7 +118,7 @@ export default function MessageSheet({ jobId, applicationId, onClose }) {
     <Portal>
     <div className="fixed inset-0 z-[60] flex items-end md:items-stretch justify-center md:justify-end" role="dialog" aria-modal="true" aria-label={`Messages with ${otherName}`}>
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full md:max-w-[480px] bg-white rounded-t-[28px] md:rounded-none h-[100dvh] flex flex-col">
+      <div ref={panelRef} tabIndex={-1} className="relative w-full md:max-w-[480px] bg-white rounded-t-[28px] md:rounded-none h-[100dvh] flex flex-col focus:outline-none">
         <div className="relative bg-white px-5 pt-4 pb-3 rounded-t-[28px] md:rounded-none border-b border-line shrink-0">
           <button type="button" onClick={onClose} aria-label="Close" className="absolute top-3 right-3 grid place-items-center h-11 w-11 rounded-full bg-soft hover:bg-line">
             <X className="h-5 w-5 text-black" />

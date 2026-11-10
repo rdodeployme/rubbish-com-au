@@ -16,8 +16,8 @@ export default function SiteFooter() {
           <h2 className="font-heading font-extrabold text-[15px] text-gold">Customers</h2>
           <ul className="mt-2">
             <li><Link to="/post-pickup" className="inline-flex items-center min-h-[44px] text-white/85 hover:text-white text-[14px]">Post a pick up</Link></li>
-            <li><Link to="/skip-request" className="inline-flex items-center min-h-[44px] text-white/85 hover:text-white text-[14px]">Skip bin quote</Link></li>
-            <li><Link to="/wheelie-request" className="inline-flex items-center min-h-[44px] text-white/85 hover:text-white text-[14px]">Wheelie bin quote</Link></li>
+            <li><Link to="/skip-request" className="inline-flex items-center min-h-[44px] text-white/85 hover:text-white text-[14px]">Skip bin waitlist</Link></li>
+            <li><Link to="/wheelie-request" className="inline-flex items-center min-h-[44px] text-white/85 hover:text-white text-[14px]">Wheelie bin waitlist</Link></li>
             <li><Link to="/how" className="inline-flex items-center min-h-[44px] text-white/85 hover:text-white text-[14px]">How it works</Link></li>
           </ul>
         </div>

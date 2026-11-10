@@ -8,8 +8,8 @@ import FinishedJobs from "@/components/home/FinishedJobs";
 import CollectorBand from "@/components/home/CollectorBand";
 
 const TILES = [
-  { to: "/skip-request", Icon: Container, title: "Skip bin", sub: "DIY, you load it" },
-  { to: "/wheelie-request", Icon: Trash2, title: "Wheelie bin", sub: "You fill, we empty" },
+  { to: "/skip-request", Icon: Container, title: "Skip bin", sub: "Waitlist, coming soon" },
+  { to: "/wheelie-request", Icon: Trash2, title: "Wheelie bin", sub: "Waitlist, coming soon" },
 ];
 
 export default function Home() {

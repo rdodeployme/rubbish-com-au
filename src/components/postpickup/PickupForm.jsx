@@ -14,6 +14,16 @@ import {
 } from "@/lib/loadModel";
 import JobSummary from "./JobSummary";
 import { takeRepost } from "@/lib/repost";
+import { readDraft, clearDraft, useSaveDraft } from "@/lib/draft";
+import { postcodeError } from "@/lib/area";
+import ErrorSummary from "@/components/ErrorSummary";
+import { errorProps } from "@/components/Fields";
+
+const DRAFT_KEY = "pickup";
+const ERROR_ORDER = [
+  "size", "description", "suburb", "pickupDate", "timeWindow",
+  "streetAddress", "postcode", "name", "mobile", "email", "hazard",
+];
 
 // Ported from the Base44 app's PickupForm. Same checks, wording and payload.
 // Desktop change only: two columns, with the job summary kept beside the form.
@@ -60,8 +70,11 @@ const inputClass =
 
 export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubmitted, mode = "waitlist", userEmail = "", onPosted = null }) {
   const repost = useMemo(() => takeRepost(), []);
+  // A job being posted again wins; otherwise pick up a half-filled form from this tab.
+  const draft = useMemo(() => (repost ? null : readDraft(DRAFT_KEY)), []);
+  const start = repost || draft || {};
   const prefill = useMemo(() => prefillFromLoad(load), []);
-  const lastAutoDescription = useRef(repost?.description || prefill?.description || "");
+  const lastAutoDescription = useRef(draft?.autoDescription ?? (repost?.description || prefill?.description || ""));
   const todayStr = useMemo(() => ymd(new Date()), []);
   const tomorrowStr = useMemo(() => {
     const t = new Date();
@@ -69,31 +82,44 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
     return ymd(t);
   }, []);
 
-  const [size, setSize] = useState(repost?.size || prefill?.size || "");
+  const [size, setSize] = useState(start.size || prefill?.size || "");
   const [materials, setMaterials] = useState(
-    Array.isArray(repost?.materials) && repost.materials.length > 0
-      ? repost.materials
+    Array.isArray(start.materials) && start.materials.length > 0
+      ? start.materials
       : prefill?.materials || []
   );
-  const [description, setDescription] = useState(repost?.description || prefill?.description || "");
-  const [photos, setPhotos] = useState(Array.isArray(repost?.photos) ? repost.photos : []);
+  const [description, setDescription] = useState(start.description ?? prefill?.description ?? "");
+  const [photos, setPhotos] = useState(Array.isArray(start.photos) ? start.photos : []);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [suburb, setSuburb] = useState(repost?.suburb || "");
-  const [pickupDate, setPickupDate] = useState(tomorrowStr);
-  const [timeWindow, setTimeWindow] = useState(repost?.time_window || "");
-  const [name, setName] = useState(repost?.name || "");
-  const [mobile, setMobile] = useState(repost?.mobile || "");
-  const [email, setEmail] = useState("");
-  const [streetAddress, setStreetAddress] = useState(repost?.street_address || "");
-  const [postcode, setPostcode] = useState(repost?.postcode || "");
-  const [hazard, setHazard] = useState(false);
+  const [suburb, setSuburb] = useState(start.suburb || "");
+  const [pickupDate, setPickupDate] = useState(draft?.pickup_date && draft.pickup_date >= todayStr ? draft.pickup_date : tomorrowStr);
+  const [timeWindow, setTimeWindow] = useState(start.time_window || "");
+  const [name, setName] = useState(start.name || "");
+  const [mobile, setMobile] = useState(start.mobile || "");
+  const [email, setEmail] = useState(draft?.email || "");
+  const [streetAddress, setStreetAddress] = useState(start.street_address || "");
+  const [postcode, setPostcode] = useState(start.postcode || "");
+  const [hazard, setHazard] = useState(!!draft?.hazard);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const refs = useRef({});
+  const summaryRef = useRef(null);
   const [tried, setTried] = useState(false);
+  const [focusSummary, setFocusSummary] = useState(0);
+
+  useSaveDraft(DRAFT_KEY, {
+    size, materials, description, autoDescription: lastAutoDescription.current,
+    photos: photos.map((p) => ({ file_uri: p.file_uri, name: p.name })),
+    suburb, pickup_date: pickupDate, time_window: timeWindow, name, mobile, email,
+    street_address: streetAddress, postcode, hazard,
+  });
+
+  useEffect(() => {
+    if (focusSummary) summaryRef.current?.focus();
+  }, [focusSummary]);
 
   useEffect(() => {
     return () => {
@@ -191,31 +217,12 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
     if (mode === "live") {
       if (!streetAddress.trim()) e.streetAddress = "Enter your street address";
       else if (streetAddress.trim().length > 200) e.streetAddress = "Street address is too long";
-      if (!/^[0-9]{4}$/.test(postcode.trim())) {
-        e.postcode = "Enter a 4-digit postcode";
-      } else {
-        const pc = Number(postcode.trim());
-        const inVic = (pc >= 3000 && pc <= 3999) || (pc >= 8000 && pc <= 8999);
-        const inQld = (pc >= 4000 && pc <= 4999) || (pc >= 9000 && pc <= 9999);
-        if (!inVic && !inQld) e.postcode = "Sorry, we only cover Melbourne and Brisbane for now.";
-      }
+      const pcErr = postcodeError(postcode);
+      if (pcErr) e.postcode = pcErr;
     }
     if (description.trim().length > 2000) e.description = "Keep the description under 2000 characters";
     if (!hazard) e.hazard = "Please confirm there are no hazardous items";
     return e;
-  };
-
-  const scrollToFirstError = (e) => {
-    const order = [
-      "size", "description", "suburb", "pickupDate", "timeWindow",
-      "streetAddress", "postcode", "name", "mobile", "email", "hazard",
-    ];
-    for (const k of order) {
-      if (e[k] && refs.current[k]) {
-        refs.current[k].scrollIntoView({ behavior: "smooth", block: "center" });
-        break;
-      }
-    }
   };
 
   // After a first submit, errors update as each field is fixed (no stale messages).
@@ -228,7 +235,7 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
     const e = validate();
     if (Object.keys(e).length > 0) {
       setErrors(e);
-      scrollToFirstError(e);
+      setFocusSummary((n) => n + 1);
       return;
     }
     setErrors({});
@@ -258,6 +265,7 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
           postcode: postcode.trim(),
           street_address: streetAddress.trim(),
         });
+        clearDraft(DRAFT_KEY);
         onPosted();
       } else {
         await base44.entities.PickupRequest.create({
@@ -277,6 +285,7 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
           hazard_confirmed: hazard,
           status: "New",
         });
+        clearDraft(DRAFT_KEY);
         onSubmitted({ name: name.trim(), suburb: suburb.trim(), mobile: mobile.trim() });
       }
     } catch (err) {
@@ -300,7 +309,8 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
   };
 
   const fieldErr = (key) =>
-    errors[key] ? <p className="mt-1 text-[13px] text-danger" role="alert">{errors[key]}</p> : null;
+    errors[key] ? <p id={`pp-${key}-error`} className="mt-1 text-[13px] text-danger">{errors[key]}</p> : null;
+  const ep = (key) => errorProps(`pp-${key}`, errors[key]);
 
   const heading = (
     <section className="bg-black">
@@ -336,7 +346,7 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
             </div>
 
             <div ref={(el) => (refs.current.size = el)}>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2" role="group" aria-label="Size" {...(errors.size ? { "aria-describedby": "pp-size-error" } : {})}>
                 {SIZE_OPTIONS.map((opt) => {
                   const sel = size === opt.value;
                   return (
@@ -385,6 +395,7 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
               <label htmlFor="pp-description" className="font-heading font-extrabold text-sm text-black">Describe it</label>
               <textarea
                 id="pp-description"
+                {...ep("description")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={2000}
@@ -445,20 +456,20 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
             <div className="grid gap-4 md:grid-cols-2">
               <div ref={(el) => (refs.current.suburb = el)}>
                 <label htmlFor="pp-suburb" className="font-heading font-extrabold text-sm text-black">Suburb</label>
-                <input id="pp-suburb" value={suburb} onChange={(e) => setSuburb(e.target.value)} placeholder="e.g. Brunswick VIC" autoComplete="address-level2" className={inputClass} />
+                <input id="pp-suburb" {...ep("suburb")} value={suburb} onChange={(e) => setSuburb(e.target.value)} placeholder="e.g. Brunswick VIC" autoComplete="address-level2" className={inputClass} />
                 {fieldErr("suburb")}
               </div>
 
               <div ref={(el) => (refs.current.pickupDate = el)}>
                 <label htmlFor="pp-date" className="font-heading font-extrabold text-sm text-black">Date</label>
-                <input id="pp-date" type="date" value={pickupDate} min={todayStr} onChange={(e) => setPickupDate(e.target.value)} className={inputClass} />
+                <input id="pp-date" {...errorProps("pp-pickupDate", errors.pickupDate)} type="date" value={pickupDate} min={todayStr} onChange={(e) => setPickupDate(e.target.value)} className={inputClass} />
                 {fieldErr("pickupDate")}
               </div>
             </div>
 
             <div ref={(el) => (refs.current.timeWindow = el)}>
-              <h3 className="font-heading font-extrabold text-sm text-black">Time window</h3>
-              <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+              <h3 id="pp-time-label" className="font-heading font-extrabold text-sm text-black">Time window</h3>
+              <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2" role="group" aria-labelledby="pp-time-label" {...(errors.timeWindow ? { "aria-describedby": "pp-timeWindow-error" } : {})}>
                 {TIME_WINDOWS.map((tw) => {
                   const sel = timeWindow === tw.value;
                   return (
@@ -482,12 +493,12 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
               <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px]">
                 <div ref={(el) => (refs.current.streetAddress = el)}>
                   <label htmlFor="pp-street" className="font-heading font-extrabold text-sm text-black">Street address</label>
-                  <input id="pp-street" value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)} placeholder="123 Smith St" maxLength={200} autoComplete="address-line1" className={inputClass} />
+                  <input id="pp-street" {...ep("streetAddress")} value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)} placeholder="123 Smith St" maxLength={200} autoComplete="address-line1" className={inputClass} />
                   {fieldErr("streetAddress")}
                 </div>
                 <div ref={(el) => (refs.current.postcode = el)}>
                   <label htmlFor="pp-postcode" className="font-heading font-extrabold text-sm text-black">Postcode</label>
-                  <input id="pp-postcode" value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder="3000" inputMode="numeric" maxLength={4} autoComplete="postal-code" className={inputClass} />
+                  <input id="pp-postcode" {...ep("postcode")} value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder="3000" inputMode="numeric" maxLength={4} autoComplete="postal-code" className={inputClass} />
                   {fieldErr("postcode")}
                 </div>
               </div>
@@ -507,13 +518,13 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
             <div className="grid gap-4 md:grid-cols-2">
               <div ref={(el) => (refs.current.name = el)}>
                 <label htmlFor="pp-name" className="font-heading font-extrabold text-sm text-black">Your name</label>
-                <input id="pp-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={inputClass} />
+                <input id="pp-name" {...ep("name")} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={inputClass} />
                 {fieldErr("name")}
               </div>
 
               <div ref={(el) => (refs.current.mobile = el)}>
                 <label htmlFor="pp-mobile" className="font-heading font-extrabold text-sm text-black">Mobile</label>
-                <input id="pp-mobile" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" autoComplete="tel" className={inputClass} />
+                <input id="pp-mobile" {...ep("mobile")} value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="04xx xxx xxx" inputMode="tel" autoComplete="tel" className={inputClass} />
                 {fieldErr("mobile")}
               </div>
             </div>
@@ -522,6 +533,7 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
               <label htmlFor="pp-email" className="font-heading font-extrabold text-sm text-black">Email</label>
               <input
                 id="pp-email"
+                {...ep("email")}
                 value={mode === "live" ? userEmail : email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -540,6 +552,7 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
               <input
                 type="checkbox"
                 checked={hazard}
+                {...ep("hazard")}
                 onChange={(e) => {
                   setHazard(e.target.checked);
                 }}
@@ -557,6 +570,8 @@ export default function PickupForm({ load, loadVersion = 0, onOpenLoader, onSubm
           <div className="lg:hidden">
             <JobSummary job={job} />
           </div>
+
+          {tried && <ErrorSummary ref={summaryRef} id="pp-errors" errors={errors} order={ERROR_ORDER} refs={refs} />}
 
           <button
             type="button"

@@ -73,7 +73,7 @@ export default function QuoteCard({ quote, jobPickupDate, onAccept, onMessage })
               Message
             </button>
           )}
-          <Link to={`/collector-profile?id=${encodeURIComponent(c.application_id || "")}`} className="flex-1 inline-flex items-center justify-center rounded-full bg-white border border-line text-black py-3 px-4 font-heading font-extrabold text-sm min-h-[48px] hover:border-black">
+          <Link to={`/collector-profile?id=${encodeURIComponent(c.application_id || "")}`} state={{ fromPickups: true }} className="flex-1 inline-flex items-center justify-center rounded-full bg-white border border-line text-black py-3 px-4 font-heading font-extrabold text-sm min-h-[48px] hover:border-black">
             View profile
           </Link>
           <button type="button" onClick={() => setConfirming(true)} className="flex-1 rounded-full bg-black text-white py-3 px-4 font-heading font-extrabold text-sm min-h-[48px]">

@@ -21,11 +21,17 @@ export default function OtpInput({ value, onChange }) {
           inputMode="numeric"
           autoComplete={i === 0 ? "one-time-code" : "off"}
           aria-label={`Digit ${i + 1}`}
-          maxLength={1}
           autoFocus={i === 0}
           onChange={(e) => {
             const v = e.target.value.replace(/\D/g, "");
             if (!v) { setAt(i, ""); return; }
+            // Typing over a filled box: keep the new digit only.
+            if (v.length === 2 && d && v.includes(d)) {
+              const nd = v[0] === d ? v[1] : v[0];
+              setAt(i, nd);
+              if (i < 5) refs.current[i + 1]?.focus();
+              return;
+            }
             if (v.length > 1) {
               onChange((value.slice(0, i) + v).slice(0, 6));
               refs.current[Math.min(i + v.length, 5)]?.focus();

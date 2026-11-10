@@ -34,8 +34,8 @@ function RequireSignIn({ children }) {
 const PAGE_TITLES = {
   "/": "Rubbish.com.au | Post a pick up, compare up to 3 quotes",
   "/post-pickup": "Post a pick up | Rubbish.com.au",
-  "/skip-request": "Skip bin quotes | Rubbish.com.au",
-  "/wheelie-request": "Wheelie bin quotes | Rubbish.com.au",
+  "/skip-request": "Skip bin waitlist | Rubbish.com.au",
+  "/wheelie-request": "Wheelie bin waitlist | Rubbish.com.au",
   "/bins": "Bin sizes | Rubbish.com.au",
   "/how": "How it works | Rubbish.com.au",
   "/my-pickups": "My pick ups | Rubbish.com.au",

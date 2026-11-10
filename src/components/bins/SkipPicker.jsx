@@ -59,9 +59,10 @@ export default function SkipPicker({ load, setLoad, binType, setBinType, size, s
     <div className="mx-auto max-w-site px-4 md:px-8 py-6 md:py-10">
       <div className="rounded-[28px] bg-gold p-5 md:p-8 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-8">
         <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+<p className="inline-flex rounded-full bg-black text-gold px-3 py-1.5 font-heading font-extrabold text-[12px] uppercase tracking-wide">Coming soon: waitlist</p>
           <h1 className="font-heading font-extrabold text-[28px] md:text-[40px] text-black leading-tight">Pick a bin size</h1>
           <p className="text-[15px] text-black leading-snug">
-            Add what needs to go and we'll suggest the size, or pick one yourself. Collectors will check access when they quote.
+            Add what needs to go and we'll suggest the size, or pick one yourself. Skip and hook bins can't be booked yet: join the waitlist and we'll contact you when bookings open near you.
           </p>
           <div className="inline-flex rounded-full p-1 bg-black/10" role="group" aria-label="Bin type">
             {toggle("skip", "Skip bin")}
@@ -90,11 +91,11 @@ export default function SkipPicker({ load, setLoad, binType, setBinType, size, s
           <ItemTiles counts={counts} onAdd={addItem} onRemove={removeItem} />
           <p className="text-[14px] text-black/70 leading-snug">{hint}</p>
           <button type="button" onClick={onGetQuotes} className="hidden lg:block w-full rounded-full bg-black text-white py-3.5 font-heading font-extrabold text-sm min-h-[52px]">
-            {`Get ${kind === "skip" ? "skip" : "hook"} bin quotes`}
+            {`Join the ${kind === "skip" ? "skip" : "hook"} bin waitlist`}
           </button>
         </div>
       </div>
-      <StickyAction summary={`${size}\u00a0m\u00b3 ${kind === "skip" ? "skip" : "hook bin"}`} detail={readoutSmall} buttonLabel="Get quotes" onClick={onGetQuotes} />
+      <StickyAction summary={`${size}\u00a0m\u00b3 ${kind === "skip" ? "skip" : "hook bin"}`} detail={readoutSmall} buttonLabel="Join the waitlist" onClick={onGetQuotes} />
     </div>
   );
 }
