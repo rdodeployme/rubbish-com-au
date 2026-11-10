@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ChevronRight, ClipboardList, HelpCircle, Truck, Plus } from "lucide-react";
+import { ChevronRight, ClipboardList, HelpCircle, Truck, Plus, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import Layout, { PageHero } from "@/components/layout/Layout";
 import { COLLECTOR_APP_URL, TERMS_URL } from "@/lib/config";
@@ -50,6 +50,7 @@ export default function Account() {
           <Row to="/post-pickup" icon={Plus} title="Post a pick up" sub="Free. Compare up to 3 quotes." />
           <Row to="/how" icon={HelpCircle} title="How it works" sub="Prices, what we take and common questions" />
           <Row href={COLLECTOR_APP_URL} icon={Truck} title="For collectors" sub="Open the collector app" />
+          {user?.role === "admin" && <Row to="/admin" icon={ShieldCheck} title="Admin" sub="Approve collectors and posts" />}
         </div>
 
         <button type="button" onClick={signOut} className="mt-6 flex w-full md:w-auto md:px-12 justify-center rounded-full border border-black bg-white text-black py-3.5 font-heading font-extrabold text-sm min-h-[48px] hover:bg-black hover:text-white">

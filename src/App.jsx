@@ -16,6 +16,7 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import Account from "@/pages/Account";
 import NotFound from "@/pages/NotFound";
+import Admin from "@/pages/Admin";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -45,6 +46,7 @@ const PAGE_TITLES = {
   "/forgot-password": "Reset password | Rubbish.com.au",
   "/reset-password": "New password | Rubbish.com.au",
   "/account": "Account | Rubbish.com.au",
+  "/admin": "Admin | Rubbish.com.au",
 };
 
 function PageTitle() {
@@ -73,6 +75,7 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
