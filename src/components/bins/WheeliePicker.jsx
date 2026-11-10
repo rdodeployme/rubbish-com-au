@@ -47,8 +47,8 @@ export default function WheeliePicker({ load, setLoad, binSize, setBinSize, coun
           </div>
           <WheelieDrawing count={count} binSize={binSize} />
           <div>
-            <p className="font-heading font-extrabold text-sm text-black" id="wb-size">Bin size</p>
-            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="wb-size">
+            <p className="font-heading font-extrabold text-sm text-black" id="wbp-size">Bin size</p>
+            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="wbp-size">
               {WHEELIE_SIZES.map((s) => (
                 <button key={s} type="button" onClick={() => setBinSize(s)} aria-pressed={binSize === s} className={pill(binSize === s)}>{`${s} L`}</button>
               ))}
@@ -63,8 +63,8 @@ export default function WheeliePicker({ load, setLoad, binSize, setBinSize, coun
             </div>
           </div>
           <div>
-            <p className="font-heading font-extrabold text-sm text-black" id="wb-freq">How often</p>
-            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="wb-freq">
+            <p className="font-heading font-extrabold text-sm text-black" id="wbp-freq">How often</p>
+            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="wbp-freq">
               {WHEELIE_FREQUENCIES.map((f) => (
                 <button key={f} type="button" onClick={() => setFrequency(f)} aria-pressed={frequency === f} className={pill(frequency === f)}>{f}</button>
               ))}
