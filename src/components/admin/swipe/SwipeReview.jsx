@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Check, Clock } from "lucide-react";
+import { X, Check } from "lucide-react";
 import Portal from "@/components/Portal";
 import { base44, errorMessage } from "@/api/base44";
 import SwipeCard from "./SwipeCard";
@@ -47,7 +47,7 @@ function RejectSheet({ kind, item, onCancel, onConfirm }) {
 
   return (
     <div className="absolute inset-0 z-30 flex items-end bg-black/60" role="dialog" aria-modal="true" aria-labelledby="reject-title">
-      <div className="w-full max-h-[85%] overflow-y-auto rounded-t-[24px] bg-white px-5 pt-5 pb-[calc(20px+env(safe-area-inset-bottom))]">
+      <div className="w-full max-h-[85%] overflow-y-auto rounded-[24px] bg-white px-5 pt-5 pb-5">
         <h2 id="reject-title" className="font-heading font-extrabold text-black text-[22px] leading-tight">
           {isJob ? `Reject ${labelFor(kind, item)}?` : `Don't approve ${labelFor(kind, item)}?`}
         </h2>
@@ -108,23 +108,26 @@ function RejectSheet({ kind, item, onCancel, onConfirm }) {
 }
 
 // Full-screen, one-at-a-time review: swipe right to approve, left to reject,
-// scroll up and down for the details. Every decision can be undone for 5 seconds.
+// scroll up and down for the details. No buttons take up room under the card.
+// Every decision waits 5 seconds (with Undo) before it's saved, and each one has
+// its own timer, so swiping the next card never cuts the last one short.
 export default function SwipeReview({ kind, jobs, collectors, onKindChange, onClose, onCommitted }) {
   const [order, setOrder] = useState({ jobs: [], collectors: [] });
   const [hidden, setHidden] = useState(() => new Set());
-  const [pending, setPending] = useState(null); // { kind, item, action, reason, until }
+  const [pending, setPending] = useState([]); // [{ key, kind, item, action, reason, until }], newest last
   const [rejecting, setRejecting] = useState(null); // { kind, item }
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [notice, setNotice] = useState(null); // { text, tone }
   const [now, setNow] = useState(Date.now());
-  const pendingRef = useRef(null);
-  const timerRef = useRef(null);
+  const pendingRef = useRef([]);
+  const timers = useRef(new Map());
   const cardRef = useRef(null);
   const closeRef = useRef(null);
+  const noticeTimer = useRef(null);
+  const seq = useRef(0);
 
   const source = useMemo(() => ({ jobs: jobs || [], collectors: collectors || [] }), [jobs, collectors]);
 
-  // Keep a stable order per deck, so Later can move a card to the back.
+  // Keep a stable order per deck, so Later (and failed saves) can move a card to the back.
   useEffect(() => {
     setOrder((prev) => {
       const next = {};
@@ -149,106 +152,127 @@ export default function SwipeReview({ kind, jobs, collectors, onKindChange, onCl
   const top = current[0];
   const next = current[1];
 
-  const unhide = (k, id, toFront = true) => {
-    setHidden((prev) => {
-      const s = new Set(prev);
-      s.delete(`${k}:${id}`);
-      return s;
-    });
-    if (toFront) setOrder((prev) => ({ ...prev, [k]: [id, ...prev[k].filter((x) => x !== id)] }));
-  };
   const hide = (k, id) => setHidden((prev) => new Set(prev).add(`${k}:${id}`));
+  const show = (k, id) => setHidden((prev) => {
+    const s = new Set(prev);
+    s.delete(`${k}:${id}`);
+    return s;
+  });
+  const moveTo = (k, id, where) => setOrder((prev) => {
+    const rest = prev[k].filter((x) => x !== id);
+    return { ...prev, [k]: where === "front" ? [id, ...rest] : [...rest, id] };
+  });
 
+  const say = (text, tone = "error") => {
+    window.clearTimeout(noticeTimer.current);
+    setNotice({ text, tone });
+    noticeTimer.current = window.setTimeout(() => setNotice(null), 6000);
+  };
+
+  const setPendingList = (list) => {
+    pendingRef.current = list;
+    setPending(list);
+  };
+  const removePending = (key) => {
+    window.clearTimeout(timers.current.get(key));
+    timers.current.delete(key);
+    setPendingList(pendingRef.current.filter((p) => p.key !== key));
+  };
+
+  // Save one decision. If it fails, the card goes to the BACK of its pile (never
+  // in front of the card you're looking at), and a short message says why.
   const commit = useCallback(async (p) => {
-    if (!p) return;
-    setSaving(true);
     try {
       await saveDecision(p.kind, p.item, p.action, p.reason);
       onCommitted(p.kind, p.item.id, p.action);
     } catch (err) {
-      unhide(p.kind, p.item.id);
-      setError(`${labelFor(p.kind, p.item)}: ${errorMessage(err, "Could not save. Please try again.")}`);
-    } finally {
-      setSaving(false);
+      moveTo(p.kind, p.item.id, "back");
+      show(p.kind, p.item.id);
+      say(`Couldn't save ${labelFor(p.kind, p.item)}: ${errorMessage(err, "please try again.")} It's back at the end of the pile.`);
     }
   }, [onCommitted]);
 
-  const flush = useCallback(() => {
-    const p = pendingRef.current;
+  const commitNow = (key) => {
+    const p = pendingRef.current.find((x) => x.key === key);
     if (!p) return Promise.resolve();
-    window.clearTimeout(timerRef.current);
-    pendingRef.current = null;
-    setPending(null);
+    removePending(key);
     return commit(p);
+  };
+
+  const flushAll = useCallback(() => {
+    const list = pendingRef.current;
+    for (const p of list) window.clearTimeout(timers.current.get(p.key));
+    timers.current.clear();
+    pendingRef.current = [];
+    setPending([]);
+    return Promise.all(list.map((p) => commit(p)));
   }, [commit]);
 
   const startPending = (k, item, action, reason) => {
-    flush();
     hide(k, item.id);
-    setError("");
-    const p = { kind: k, item, action, reason, until: Date.now() + UNDO_MS };
-    pendingRef.current = p;
-    setPending(p);
+    const key = `p${++seq.current}`;
+    const p = { key, kind: k, item, action, reason, until: Date.now() + UNDO_MS };
+    setPendingList([...pendingRef.current, p]);
+    timers.current.set(key, window.setTimeout(() => commitNow(key), UNDO_MS));
     if (navigator.vibrate) navigator.vibrate(12);
-    timerRef.current = window.setTimeout(() => {
-      if (pendingRef.current === p) {
-        pendingRef.current = null;
-        setPending(null);
-        commit(p);
-      }
-    }, UNDO_MS);
   };
 
+  // Undo the most recent decision: its card comes back to the top.
   const undo = () => {
-    const p = pendingRef.current;
+    const p = pendingRef.current[pendingRef.current.length - 1];
     if (!p) return;
-    window.clearTimeout(timerRef.current);
-    pendingRef.current = null;
-    setPending(null);
+    removePending(p.key);
     if (p.kind !== kind) onKindChange(p.kind);
-    unhide(p.kind, p.item.id);
+    moveTo(p.kind, p.item.id, "front");
+    show(p.kind, p.item.id);
   };
 
   // Save anything waiting if the deck is closed or the page is left.
-  useEffect(() => () => { flush(); }, [flush]);
+  useEffect(() => () => { flushAll(); window.clearTimeout(noticeTimer.current); }, [flushAll]);
   useEffect(() => {
-    const onHide = () => { if (document.visibilityState === "hidden") flush(); };
+    const onHide = () => { if (document.visibilityState === "hidden") flushAll(); };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  }, [flush]);
+  }, [flushAll]);
 
-  // Countdown for the Undo bar.
+  // Countdown for the Undo pill.
+  const hasPending = pending.length > 0;
   useEffect(() => {
-    if (!pending) return undefined;
+    if (!hasPending) return undefined;
     const t = window.setInterval(() => setNow(Date.now()), 100);
     return () => window.clearInterval(t);
-  }, [pending]);
+  }, [hasPending]);
 
-  // The page behind doesn't scroll while the deck is open.
+  // The page behind doesn't scroll (or bounce) while the deck is open.
   useEffect(() => {
     const prev = document.body.style.overflow;
+    const prevOb = document.documentElement.style.overscrollBehavior;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
     closeRef.current?.focus();
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+      document.documentElement.style.overscrollBehavior = prevOb;
+    };
   }, []);
 
-  const handleSwiped = (dir) => {
-    if (!top) return;
+  const handleSwiped = (dir, item) => {
+    if (!item) return;
     if (dir === "right") {
-      startPending(kind, top, "approve", "");
+      startPending(kind, item, "approve", "");
     } else {
-      hide(kind, top.id);
-      setRejecting({ kind, item: top });
+      hide(kind, item.id);
+      setRejecting({ kind, item });
     }
   };
 
   const later = () => {
     if (!top || current.length < 2) return;
-    setOrder((prev) => ({ ...prev, [kind]: [...prev[kind].filter((x) => x !== top.id), top.id] }));
+    moveTo(kind, top.id, "back");
   };
 
   const close = async () => {
-    await flush();
+    await flushAll();
     onClose();
   };
 
@@ -256,12 +280,13 @@ export default function SwipeReview({ kind, jobs, collectors, onKindChange, onCl
   useEffect(() => {
     const onKey = (e) => {
       if (rejecting) {
-        if (e.key === "Escape") { unhide(rejecting.kind, rejecting.item.id); setRejecting(null); }
+        if (e.key === "Escape") { show(rejecting.kind, rejecting.item.id); setRejecting(null); }
         return;
       }
       if (e.target && /input|textarea/i.test(e.target.tagName)) return;
       if (e.key === "ArrowRight" && top) cardRef.current?.swipe("right");
       else if (e.key === "ArrowLeft" && top) cardRef.current?.swipe("left");
+      else if (e.key === "ArrowDown" && top) later();
       else if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
@@ -270,18 +295,19 @@ export default function SwipeReview({ kind, jobs, collectors, onKindChange, onCl
 
   const counts = { jobs: deck("jobs").length, collectors: deck("collectors").length };
   const other = kind === "jobs" ? "collectors" : "jobs";
-  const secondsLeft = pending ? Math.max(0, Math.ceil((pending.until - now) / 1000)) : 0;
-  const progress = pending ? Math.max(0, Math.min(1, (pending.until - now) / UNDO_MS)) : 0;
+  const latest = pending[pending.length - 1];
+  const secondsLeft = latest ? Math.max(0, Math.ceil((latest.until - now) / 1000)) : 0;
+  const progress = latest ? Math.max(0, Math.min(1, (latest.until - now) / UNDO_MS)) : 0;
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-[70] flex flex-col bg-asphalt" role="dialog" aria-modal="true" aria-label="Swipe review">
-        {/* Header: close, the Jobs / Collectors switch, how many are left. */}
-        <div className="shrink-0 px-3 pt-[calc(8px+env(safe-area-inset-top))] pb-2 flex items-center gap-2">
-          <button ref={closeRef} type="button" onClick={close} aria-label="Close review" className="grid place-items-center h-11 w-11 rounded-full text-white">
+      <div className="fixed inset-0 z-[70] flex flex-col bg-asphalt" style={{ overscrollBehavior: "none" }} role="dialog" aria-modal="true" aria-label="Swipe review">
+        {/* Header: close, the Jobs / Collectors switch, and Later. */}
+        <div className="shrink-0 px-2 pt-[calc(6px+env(safe-area-inset-top))] pb-1.5 flex items-center gap-1">
+          <button ref={closeRef} type="button" onClick={close} aria-label="Close review" className="grid place-items-center h-11 w-11 shrink-0 rounded-full text-white">
             <X className="h-6 w-6" strokeWidth={2.5} />
           </button>
-          <div className="flex-1 flex justify-center">
+          <div className="flex-1 min-w-0 flex justify-center">
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/10 p-1" role="tablist" aria-label="What to review">
               {[["jobs", "Jobs"], ["collectors", "Collectors"]].map(([k, label]) => (
                 <button
@@ -289,8 +315,8 @@ export default function SwipeReview({ kind, jobs, collectors, onKindChange, onCl
                   type="button"
                   role="tab"
                   aria-selected={kind === k}
-                  onClick={() => { setError(""); onKindChange(k); }}
-                  className={`min-h-[40px] rounded-full px-4 font-heading font-extrabold text-[14px] inline-flex items-center justify-center gap-1.5 ${kind === k ? "bg-gold text-black" : "text-white"}`}
+                  onClick={() => onKindChange(k)}
+                  className={`min-h-[38px] rounded-full px-3 font-heading font-extrabold text-[14px] inline-flex items-center justify-center gap-1.5 ${kind === k ? "bg-gold text-black" : "text-white"}`}
                 >
                   {label}
                   <span className={`text-[12px] ${kind === k ? "text-black/70" : "text-white/60"}`}>{counts[k]}</span>
@@ -298,25 +324,27 @@ export default function SwipeReview({ kind, jobs, collectors, onKindChange, onCl
               ))}
             </div>
           </div>
-          <div className="w-11" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={later}
+            disabled={!top || current.length < 2 || !!rejecting}
+            aria-label="Decide later (move to the back)"
+            className="h-11 w-11 shrink-0 rounded-full font-heading font-extrabold text-[13px] text-white/80 disabled:opacity-30"
+          >
+            Later
+          </button>
         </div>
 
-        {error && (
-          <div className="mx-3 mb-2 rounded-[14px] bg-white px-4 py-3 text-[14px] font-bold text-danger" role="alert">
-            {error}
-          </div>
-        )}
-
-        {/* The cards. */}
-        <div className="relative flex-1 mx-3 mb-2">
+        {/* The cards fill the rest of the screen. */}
+        <div className="relative flex-1 mx-2 mb-[calc(8px+env(safe-area-inset-bottom))]">
           {top ? (
             <>
               {next && (
-                <div className="absolute inset-0 rounded-[24px] bg-white overflow-hidden" style={{ transform: "translateY(10px) scale(0.96)", opacity: 0.7 }} aria-hidden="true">
+                <div className="absolute inset-0 rounded-[24px] bg-white overflow-hidden pointer-events-none" style={{ transform: "translateY(8px) scale(0.96)", opacity: 0.7 }} aria-hidden="true">
                   {kind === "jobs" ? <JobReviewDetails job={next} /> : <CollectorReviewDetails app={next} />}
                 </div>
               )}
-              <SwipeCard key={`${kind}:${top.id}`} ref={cardRef} onSwiped={handleSwiped} disabled={!!rejecting}>
+              <SwipeCard key={`${kind}:${top.id}`} ref={cardRef} item={top} onSwiped={handleSwiped} disabled={!!rejecting}>
                 {kind === "jobs" ? <JobReviewDetails job={top} /> : <CollectorReviewDetails app={top} />}
               </SwipeCard>
             </>
@@ -338,11 +366,38 @@ export default function SwipeReview({ kind, jobs, collectors, onKindChange, onCl
             </div>
           )}
 
+          {/* Floating messages: they sit over the bottom of the card and never push it around. */}
+          {!rejecting && (latest || notice) && (
+            <div className="pointer-events-none absolute inset-x-2 bottom-2 z-40 flex flex-col gap-2">
+              {notice && (
+                <div className="pointer-events-auto rounded-[14px] bg-black px-4 py-2.5 shadow-lg flex items-start gap-3" role="alert">
+                  <p className="flex-1 text-[13px] leading-snug text-white">{notice.text}</p>
+                  <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="-mr-1 grid place-items-center h-7 w-7 shrink-0 text-white/70">
+                    <X className="h-4 w-4" strokeWidth={2.5} />
+                  </button>
+                </div>
+              )}
+              {latest && (
+                <div className="pointer-events-auto relative overflow-hidden rounded-full bg-black pl-4 pr-1 py-1 shadow-lg flex items-center gap-2" role="status">
+                  <div className="absolute left-0 bottom-0 h-[3px] bg-gold" style={{ width: `${progress * 100}%` }} aria-hidden="true" />
+                  <p className="flex-1 min-w-0 text-[13px] text-white truncate">
+                    <span className="font-bold">{latest.action === "approve" ? "Approved" : latest.kind === "jobs" ? "Rejected" : "Not approved"}</span>{" "}
+                    {labelFor(latest.kind, latest.item)} · saves in {secondsLeft}s
+                    {pending.length > 1 ? ` (+${pending.length - 1})` : ""}
+                  </p>
+                  <button type="button" onClick={undo} className="min-h-[40px] shrink-0 rounded-full bg-gold px-4 font-heading font-extrabold text-[14px] text-black">
+                    Undo
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {rejecting && (
             <RejectSheet
               kind={rejecting.kind}
               item={rejecting.item}
-              onCancel={() => { unhide(rejecting.kind, rejecting.item.id); setRejecting(null); }}
+              onCancel={() => { show(rejecting.kind, rejecting.item.id); setRejecting(null); }}
               onConfirm={(reason) => {
                 const r = rejecting;
                 setRejecting(null);
@@ -350,57 +405,6 @@ export default function SwipeReview({ kind, jobs, collectors, onKindChange, onCl
               }}
             />
           )}
-        </div>
-
-        {/* Undo bar: the decision is only saved when this runs out. */}
-        <div className="shrink-0 px-3 min-h-[56px]">
-          {pending ? (
-            <div className="relative overflow-hidden rounded-[14px] bg-white flex items-center gap-3 px-4 py-2.5" role="status">
-              <div className="absolute left-0 bottom-0 h-[3px] bg-gold" style={{ width: `${progress * 100}%` }} aria-hidden="true" />
-              <p className="flex-1 min-w-0 text-[14px] text-black truncate">
-                <span className="font-bold">{pending.action === "approve" ? "Approving" : pending.kind === "jobs" ? "Rejecting" : "Not approving"}</span>{" "}
-                {labelFor(pending.kind, pending.item)} in {secondsLeft}s
-              </p>
-              <button type="button" onClick={undo} className="min-h-[44px] shrink-0 rounded-full bg-black px-5 font-heading font-extrabold text-[14px] text-gold">
-                Undo
-              </button>
-            </div>
-          ) : saving ? (
-            <p className="text-center text-white/70 text-[13px] py-4">Saving...</p>
-          ) : top ? (
-            <p className="text-center text-white/60 text-[13px] py-4">Swipe right to approve, left to reject. Scroll for details.</p>
-          ) : null}
-        </div>
-
-        {/* Buttons for the same actions. */}
-        <div className="shrink-0 px-6 pt-1 pb-[calc(14px+env(safe-area-inset-bottom))] flex items-center justify-center gap-6">
-          <button
-            type="button"
-            onClick={() => cardRef.current?.swipe("left")}
-            disabled={!top || !!rejecting}
-            aria-label={kind === "jobs" ? "Reject" : "Don't approve"}
-            className="grid place-items-center h-[68px] w-[68px] rounded-full bg-white text-black shadow-lg disabled:opacity-30"
-          >
-            <X className="h-8 w-8" strokeWidth={3} />
-          </button>
-          <button
-            type="button"
-            onClick={later}
-            disabled={!top || current.length < 2 || !!rejecting}
-            aria-label="Decide later"
-            className="grid place-items-center h-[52px] w-[52px] rounded-full bg-white/15 text-white disabled:opacity-30"
-          >
-            <Clock className="h-6 w-6" strokeWidth={2.5} />
-          </button>
-          <button
-            type="button"
-            onClick={() => cardRef.current?.swipe("right")}
-            disabled={!top || !!rejecting}
-            aria-label="Approve"
-            className="grid place-items-center h-[68px] w-[68px] rounded-full bg-gold text-black shadow-lg disabled:opacity-30"
-          >
-            <Check className="h-8 w-8" strokeWidth={3} />
-          </button>
         </div>
       </div>
     </Portal>
