@@ -7,6 +7,8 @@ import PostReviewCard from "./PostReviewCard";
 import CollectorAvatar from "@/components/mypickups/CollectorAvatar";
 import { formatAUDate, formatAUDateTime } from "@/lib/adminConfig";
 import { melbourneToday } from "@/lib/format";
+import { useUrlParam } from "@/hooks/useUrlParam";
+import SwipeReview from "./swipe/SwipeReview";
 
 // Ported from the Base44 app's admin (ReviewTab).
 const WAITING_COLLECTOR = ["New", "Checking"];
@@ -83,6 +85,9 @@ export default function ReviewTab({ onCountChange }) {
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
   const [flash, setFlash] = useState("");
+  // Swipe review: ?swipe=jobs or ?swipe=collectors, so the phone's Back button closes it.
+  const swipe = useUrlParam("swipe");
+  const swipeKind = swipe.value === "jobs" || swipe.value === "collectors" ? swipe.value : "";
 
   const load = useCallback(async () => {
     setError("");
@@ -134,12 +139,41 @@ export default function ReviewTab({ onCountChange }) {
     }
   };
 
+  const handleSwipeCommitted = useCallback((kind, id) => {
+    if (kind === "jobs") setPosts((prev) => (prev ? prev.filter((x) => x.id !== id) : prev));
+    else setApps((prev) => (prev ? prev.filter((x) => x.id !== id) : prev));
+  }, []);
+
   const loading = apps === null || posts === null;
 
   return (
     <div className="px-4 md:px-0 pt-5 pb-10">
       {flash && <div className="mb-4 rounded-[14px] bg-gold px-4 py-3 text-black text-[14px] font-bold" role="status">{flash}</div>}
       {error && <p className="mb-4 text-[14px] font-bold text-danger" role="alert">{error}</p>}
+
+      {/* Swipe review: one at a time, full screen, made for a phone. */}
+      <section aria-labelledby="swipe-review" className="mb-8 rounded-[20px] bg-black p-4 md:p-5">
+        <h2 id="swipe-review" className="font-heading font-extrabold text-white text-[20px]">Swipe to review</h2>
+        <p className="mt-1 text-white/70 text-[14px]">Right to approve, left to reject. Scroll each card for the details.</p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {[
+            ["jobs", "Jobs", posts],
+            ["collectors", "Collectors", apps],
+          ].map(([k, label, list]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => swipe.push(k)}
+              disabled={loading}
+              className="min-h-[96px] rounded-[16px] bg-gold px-4 py-3 text-left disabled:opacity-60"
+            >
+              <span className="block font-heading font-extrabold text-black text-[34px] leading-none">{loading ? "-" : list.length}</span>
+              <span className="mt-1 block font-heading font-extrabold text-black text-[16px]">{label}</span>
+              <span className="block text-black/70 text-[13px]">{loading ? "Loading" : list.length === 0 ? "Nothing waiting" : "Start reviewing"}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-8 lg:grid-cols-2">
         <section aria-labelledby="review-collectors">
@@ -179,6 +213,16 @@ export default function ReviewTab({ onCountChange }) {
 
       {selectedApp && <CollectorSheet record={selectedApp} onClose={() => setSelectedApp(null)} onUpdated={handleAppUpdated} />}
       {selectedPost && <PickupSheet record={selectedPost} onClose={() => setSelectedPost(null)} onUpdated={handlePostUpdated} />}
+      {swipeKind && !loading && (
+        <SwipeReview
+          kind={swipeKind}
+          jobs={posts}
+          collectors={apps}
+          onKindChange={(k) => swipe.replace(k)}
+          onClose={() => swipe.clear()}
+          onCommitted={handleSwipeCommitted}
+        />
+      )}
     </div>
   );
 }
